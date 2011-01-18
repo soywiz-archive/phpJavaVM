@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Class to access the Facebook's Graph API.
+
+ * @version 0.7
+ * 
+ * @author soywiz
+ * 
+ * @see https://github.com/soywiz/phplutils/tree/master/facebook
+ * @see http://developers.facebook.com/docs/api/
+ */
 class FacebookGraphApi {
 	protected $params = array();
 
@@ -7,15 +17,33 @@ class FacebookGraphApi {
 	protected function __construct($access_token = NULL) {
 		$this->params['access_token'] = $access_token;
 	}
-	
+
+	/**
+	 * Creates a FacebookGraphApi from an access_token.
+	 * 
+	 * @param  string  $access_token
+	 */
 	static public function fromAccessToken($access_token) {
 		return new static($access_token);
 	}
 	
+	/**
+	 * Creates a FacebookGraphApi from a client_id and a client_secret.
+	 * 
+	 * @param  string  $client_id
+	 * @param  string  $client_secret
+	 */
 	static public function fromSecret($client_id, $client_secret) {
 		return new static(static::oauth_access_token($client_id, $client_secret));
 	}
-	
+
+	/**
+	 * Obtains an access_token from a client_id and a client_secret.
+	 * 
+	 * @param  string  $client_id         - An application_id
+	 * @param  string  $client_secret     - 
+	 * @param  boolean $cache             -
+	 */
 	static public function oauth_access_token($client_id, $client_secret, $cache = false) {
 		$result = file_get_contents(sprintf(
 			'https://graph.facebook.com/oauth/access_token?grant_type=%s&client_id=%s&client_secret=%s',
@@ -55,6 +83,9 @@ class FacebookGraphApi {
 		return sprintf('https://graph.facebook.com/oauth/authorize?%s', http_build_query($info));
 	}
 	
+	/**
+	 * @TODO
+	 */
 	static public function oauth_exchange_sessions() {
 		throw(new Exception("To implement"));
 	}
@@ -98,8 +129,12 @@ class FacebookGraphApi {
 	}
 
 	/**
+	 * Performs a request.
+	 * 
 	 * @param  $id               ID type
 	 * @param  $connection_type  Type of the connection of NULL to obtain the object itself
+	 * 
+	 * @see http://developers.facebook.com/docs/api/
 	 */
 	public function request($id, $connection_type = NULL) {
 		$result = JSON::decode(file_get_contents($this->request_url($id, $connection_type)), true);
