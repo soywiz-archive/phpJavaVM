@@ -1,0 +1,4 @@
+@dll SDL
+@calltype CALL_TYPE_C
+@function "SDL_Init", "i", "SDL_Init"
+@function "SDL_SetVideoMode", "iiii", "SDL_SetVideoMode"
