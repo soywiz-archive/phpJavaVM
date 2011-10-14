@@ -8,6 +8,10 @@ class Object {
 	}
 }
 
+class Exception extends \Exception {
+
+}
+
 class String extends \java\lang\Object {
 	public $str;
 	public $encoding;

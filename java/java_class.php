@@ -172,7 +172,8 @@ class JavaClass {
 		switch ($type) {
 			case self::CONSTANT_Utf8:
 				$stringLength = fread2_be($f);
-				return new JavaConstantString($this->constantPool, fread($f, $stringLength));
+				$str = ($stringLength > 0) ? fread($f, $stringLength) : '';
+				return new JavaConstantString($this->constantPool, $str);
 
 			case self::CONSTANT_Integer:
 				$value = fread4_be_s($f);

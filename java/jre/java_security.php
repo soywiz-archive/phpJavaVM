@@ -2,11 +2,14 @@
 
 namespace java\security;
 
+class NoSuchAlgorithmException extends \java\lang\Exception {
+}
+
 class MessageDigest extends \java\lang\Object {
 	static public function getInstance($type) {
 		switch ($type) {
 			case 'MD5': return new MessageDigestMd5();
-			default: throw(new Exception("Unknown Digest"));
+			default: throw(new NoSuchAlgorithmException("Unknown Digest"));
 		}
 	}
 }

@@ -263,9 +263,11 @@ class JavaOpcodes {
 		self::OP_IINC          => array('bb'), // Increment local variable by constant
 		self::OP_IADD          => array('bb'), // 
 		self::OP_IMUL          => array(''),   // Multiply int
+		self::OP_IDIV          => array(''),   // 
 		self::OP_IAND          => array(''),   // 
 		
 		self::OP_LMUL          => array(''),   // Multiply long
+		
 		
 		self::OP_I2B           => array(''),   // Convert int to byte
 		
@@ -283,6 +285,7 @@ class JavaOpcodes {
 		
 		self::OP_IFGE          => array('w'),  // Branch if int comparison with zero succeeds
 		self::OP_IFNE          => array('w'),  // Branch if int comparison with zero succeeds
+		self::OP_IFEQ          => array('w'),  // Branch if int comparison with zero succeeds
 		
 		self::OP_NEWARRAY      => array('b'),  // Create new array 
 		self::OP_ANEWARRAY     => array('2'),  // Create new array of reference

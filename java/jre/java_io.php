@@ -9,7 +9,13 @@ class PrintStream extends \java\lang\Object {
 		$this->f = $f;
 	}
 
-	public function println($object) {
-		\fprintf($this->f, "%s\n", $object);
+	public function _print($object = '') {
+		if (is_bool($object)) $object = $object ? 'true' : 'false';
+		\fprintf($this->f, "%s", $object);
+	}
+	
+	public function println($object = '') {
+		$this->_print($object);
+		$this->_print("\n");
 	}
 }

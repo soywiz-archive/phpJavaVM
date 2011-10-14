@@ -18,7 +18,7 @@ $javaInterpreter->addClass($javaClass);
 $params = array();
 
 $methodName = 'main';
-//$methodName = 'test12';
+//$methodName = 'test15_bool_logic';
 
 //$javaInterpreter->autoDisasm = true;
 //$javaInterpreter->autoTrace  = true;
