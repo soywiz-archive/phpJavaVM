@@ -15,6 +15,9 @@ $javaClass->readClassFile(fopen('Sample/bin/Test.class', 'rb'));
 $javaInterpreter = new JavaInterpreter();
 $javaInterpreter->addClass($javaClass);
 
-//$javaClass->getMethod('main')->disasm();
+$methodName = 'test8';
+$methodName = 'main';
 
-$javaInterpreter->callStatic('Test', 'main');
+//$javaClass->getMethod($methodName)->disasm();
+
+$javaInterpreter->callStatic('Test', $methodName);
