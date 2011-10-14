@@ -5,14 +5,14 @@ require_once(__DIR__ . '/java_opcodes.php');
 require_once(__DIR__ . '/java_disassembler.php');
 require_once(__DIR__ . '/java_type.php');
 require_once(__DIR__ . '/java_constant.php');
+require_once(__DIR__ . '/java_class.php');
 
-require_once(__DIR__ . '/jre/java_lang.php');
-require_once(__DIR__ . '/jre/java_io.php');
+require_once(__DIR__ . '/java_interpreter.php');
 
-\java\lang\System::$out = new \java\io\PrintStream(fopen('php://output', 'wb'));
-
-class JavaInterpreter {
-}
-
-$javaClass = new JavaClassFile();
+$javaClass = new JavaClass();
 $javaClass->readClassFile(fopen('Test.class', 'rb'));
+
+$javaInterpreter = new JavaInterpreter();
+$javaInterpreter->addClass($javaClass);
+
+$javaInterpreter->callStatic('Test', 'main');

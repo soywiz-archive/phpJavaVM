@@ -218,6 +218,16 @@ class JavaOpcodes {
 		self::OP_INVOKESPECIAL => array('2'), // Invoke instance method; special handling for superclass, private, and instance initialization method invocations
 		self::OP_INVOKEVIRTUAL => array('2'), // Invoke instance method; dispatch based on class
 		self::OP_LDC           => array('1'), // Push item from runtime constant pool
-
 	);
+	
+	static public function getOpcodeName($opcodeId) {
+		static $mapIdName = array();
+		if (empty($mapIdName)) {
+			$class = new ReflectionClass('JavaOpcodes');
+			foreach ($class->getConstants() as $constantName => $constantValue) {
+				$mapIdName[$constantValue] = $constantName;
+			}
+		}
+		return substr($mapIdName[$opcodeId], 3);
+	}
 }

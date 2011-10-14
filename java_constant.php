@@ -34,6 +34,10 @@ class JavaConstant {
 	public function getNormalizedString() {
 		return get_called_class();
 	}
+	
+	public function getValue() {
+		return NULL;
+	}
 }
 
 class JavaConstantStringReference extends JavaConstant {
@@ -48,11 +52,26 @@ class JavaConstantStringReference extends JavaConstant {
 		//return "STR_REF(" . $this->constantPool->get($this->classStringIndex)->getNormalizedString() . ")";
 		return $this->constantPool->get($this->classStringIndex)->getNormalizedString();
 	}
+	
+	public function getString() {
+		return $this->constantPool->get($this->classStringIndex)->string;
+	}
+	
+	public function getValue() {
+		return $this->getString();
+	}
 }
 
 class JavaConstantClassReference extends JavaConstantStringReference {
 	public function getNormalizedString() {
-		return 'CLASS(' . $this->constantPool->get($this->classStringIndex)->getNormalizedString() . ')';
+		return 'CLASS(' . json_encode($this->getClassName()) . ')';
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function getClassName() {
+		return $this->constantPool->get($this->classStringIndex)->string;
 	}
 }
 
@@ -89,6 +108,20 @@ class JavaConstantMemberReference extends JavaConstant {
 			$this->constantPool->get($this->nameTypeDescriptorIndex)->getNormalizedString() . 
 		")";
 	}
+	
+	/**
+	 * @return JavaConstantClassReference
+	 */
+	public function getClassReference() {
+		return $this->constantPool->get($this->classReferenceIndex);
+	}
+
+	/**
+	 * @return JavaConstantNameTypeDescriptor 
+	 */
+	public function getNameTypeDescriptor() {
+		return $this->constantPool->get($this->nameTypeDescriptorIndex);
+	}
 }
 
 class JavaConstantMethodReference extends JavaConstantMemberReference {
@@ -116,29 +149,28 @@ class JavaConstantNameTypeDescriptor extends JavaConstant {
 	public function getNormalizedString() {
 		return "NAME_TYPE_REF(" .
 			$this->constantPool->get($this->identifierNameStringIndex)->getNormalizedString() . ", " .
-			JavaType::parse($this->constantPool->get($this->typeDescriptorStringIndex)->string) . 
+			$this->getTypeDescriptor() . 
 		")";
 	}
-}
-
-class JavaMember extends JavaConstant {
-	public $constantPool;
-	public $access_flags;
-	public $name_index;
-	public $descriptor_index;
-	public $attributes;
-
-	public function __construct(JavaConstantPool $constantPool, $access_flags, $name_index, $descriptor_index, $attributes) {
-		$this->constantPool = $constantPool;
-		$this->access_flags = $access_flags;
-		$this->name_index = $name_index;
-		$this->descriptor_index = $descriptor_index;
-		$this->attributes = $attributes;
+	
+	/**
+	 * @return string 
+	 */
+	public function getIdentifierNameString() {
+		return $this->constantPool->get($this->identifierNameStringIndex)->string;
 	}
-}
 
-class JavaMethod extends JavaMember {
-}
+	/**
+	 * @return string 
+	 */
+	public function getTypeDescriptorString() {
+		return $this->constantPool->get($this->typeDescriptorStringIndex)->string;
+	}
 
-class JavaField extends JavaMember {
+	/**
+	 * @return JavaType 
+	 */
+	public function getTypeDescriptor() {
+		return JavaType::parse($this->getTypeDescriptorString());
+	}
 }
