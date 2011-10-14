@@ -77,6 +77,13 @@ class JavaInterpreter {
 		}
 		
 		if (!is_callable($func)) {
+			// print is a reserved keyword on PHP.
+			if ($func[1] == 'print') {
+				$func[1] = '_print';
+			}
+		}
+		
+		if (!is_callable($func)) {
 			//print_r($func);
 			if (!is_string($func[0])) {
 				$func[0] = 'INSTANCEOF(' . get_class($func[0]) . ')';
@@ -103,6 +110,8 @@ class JavaInterpreter {
 		foreach ($methodType->params as $k => $paramType) {
 			if ($paramType instanceof JavaTypeIntegralChar) {
 				$params[$k] = chr($params[$k]);
+			} else if ($paramType instanceof JavaTypeIntegralBool) {
+				$params[$k] = (bool)($params[$k]);
 			}
 		}
 		
@@ -169,6 +178,7 @@ class JavaInterpreter {
 					
 					$this->stackPush($param0);
 				break;
+				case JavaOpcodes::OP_ICONST_M1:
 				case JavaOpcodes::OP_ICONST_0:
 				case JavaOpcodes::OP_ICONST_1:
 				case JavaOpcodes::OP_ICONST_2:
@@ -177,12 +187,23 @@ class JavaInterpreter {
 				case JavaOpcodes::OP_ICONST_5:
 					$this->stackPush($op - JavaOpcodes::OP_ICONST_0);
 				break;
+				case JavaOpcodes::OP_LDC_W:
+					$param0 = fread2_be($f);
+					/* @var $constant JavaConstant */
+					$constant = $code->constantPool->get($param0);
+					
+					$this->stackPush($constant->getValue());
+				break;
 				case JavaOpcodes::OP_LDC:
 					$param0 = fread1($f);
 					/* @var $constant JavaConstant */
 					$constant = $code->constantPool->get($param0);
 					
 					$this->stackPush($constant->getValue());
+				break;
+				case JavaOpcodes::OP_ISTORE:
+					$index = fread1($f);
+					$locals[$index] = $this->stackPop();
 				break;
 				case JavaOpcodes::OP_ISTORE_0:
 				case JavaOpcodes::OP_ISTORE_1:
@@ -202,6 +223,10 @@ class JavaInterpreter {
 				case JavaOpcodes::OP_ALOAD_2:
 				case JavaOpcodes::OP_ALOAD_3:
 					$this->stackPush($locals[$op - JavaOpcodes::OP_ALOAD_0]);
+				break;
+				case JavaOpcodes::OP_ILOAD:
+					$index = fread1($f);
+					$this->stackPush($locals[$index]);
 				break;
 				case JavaOpcodes::OP_ILOAD_0:
 				case JavaOpcodes::OP_ILOAD_1:
@@ -232,38 +257,57 @@ class JavaInterpreter {
 					$relativeAddress = fread2_be_s($f);
 					fseek($f, $instruction_offset + $relativeAddress);
 				break;
+				case JavaOpcodes::OP_IF_ICMPEQ:
 				case JavaOpcodes::OP_IF_ICMPNE:
-					$relativeAddress = fread2_be_s($f);
-					$valueRight = $this->stackPop();
-					$valueLeft  = $this->stackPop();
-					if ($valueLeft != $valueRight) {
-						fseek($f, $instruction_offset + $relativeAddress);
-					}
-					//echo "$valueLeft; $valueRight\n";
-					break;
+				case JavaOpcodes::OP_IF_ICMPLE:
 				case JavaOpcodes::OP_IF_ICMPLT:
+				case JavaOpcodes::OP_IF_ICMPGE:
+				case JavaOpcodes::OP_IF_ICMPGT:
 					$relativeAddress = fread2_be_s($f);
 					$valueRight = $this->stackPop();
 					$valueLeft  = $this->stackPop();
-					if ($valueLeft < $valueRight) {
+					
+					$result = NULL;
+					
+					switch ($op) {
+						case JavaOpcodes::OP_IF_ICMPEQ: $result = ($valueLeft == $valueRight); break;
+						case JavaOpcodes::OP_IF_ICMPNE: $result = ($valueLeft != $valueRight); break;
+						case JavaOpcodes::OP_IF_ICMPLE: $result = ($valueLeft <= $valueRight); break;
+						case JavaOpcodes::OP_IF_ICMPLT: $result = ($valueLeft < $valueRight); break;
+						case JavaOpcodes::OP_IF_ICMPGE: $result = ($valueLeft >= $valueRight); break;
+						case JavaOpcodes::OP_IF_ICMPGT: $result = ($valueLeft > $valueRight); break;
+					}
+					
+					if ($result === NULL) throw(new Exception("Unexpected !!!"));
+					
+					if ($result) {
 						fseek($f, $instruction_offset + $relativeAddress);
 					}
 					//echo "$valueLeft; $valueRight\n";
 				break;
-				case JavaOpcodes::OP_IFGE:
-					$relativeAddress = fread2_be_s($f);
-					$valueRight = 0;
-					$valueLeft  = $this->stackPop();
-					if ($valueLeft >= $valueRight) {
-						fseek($f, $instruction_offset + $relativeAddress);
-					}
-					//echo "$valueLeft; $valueRight\n";
-				break;
+				case JavaOpcodes::OP_IFEQ:
 				case JavaOpcodes::OP_IFNE:
+				case JavaOpcodes::OP_IFLE:
+				case JavaOpcodes::OP_IFLT:
+				case JavaOpcodes::OP_IFGE:
+				case JavaOpcodes::OP_IFGT:
 					$relativeAddress = fread2_be_s($f);
 					$valueRight = 0;
 					$valueLeft  = $this->stackPop();
-					if ($valueLeft != $valueRight) {
+					$result = NULL;
+					
+					switch ($op) {
+						case JavaOpcodes::OP_IFEQ: $result = ($valueLeft == $valueRight); break;
+						case JavaOpcodes::OP_IFNE: $result = ($valueLeft != $valueRight); break;
+						case JavaOpcodes::OP_IFLE: $result = ($valueLeft <= $valueRight); break;
+						case JavaOpcodes::OP_IFLT: $result = ($valueLeft <  $valueRight); break;
+						case JavaOpcodes::OP_IFGE: $result = ($valueLeft >= $valueRight); break;
+						case JavaOpcodes::OP_IFGT: $result = ($valueLeft >  $valueRight); break;
+					}
+					
+					if ($result === NULL) throw(new Exception("Unexpected !!!"));
+					
+					if ($result) {
 						fseek($f, $instruction_offset + $relativeAddress);
 					}
 					//echo "$valueLeft; $valueRight\n";
@@ -278,10 +322,30 @@ class JavaInterpreter {
 					$valueLeft  = $this->stackPop();
 					$this->stackPush($valueLeft + $valueRight);
 				break;
+				case JavaOpcodes::OP_ISUB:
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					$this->stackPush($valueLeft - $valueRight);
+				break;
 				case JavaOpcodes::OP_IMUL:
 					$valueRight = $this->stackPop();
 					$valueLeft  = $this->stackPop();
 					$this->stackPush($valueLeft * $valueRight);
+				break;
+				case JavaOpcodes::OP_IDIV:
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					$this->stackPush((int)($valueLeft / $valueRight));
+				break;
+				case JavaOpcodes::OP_IXOR:
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					$this->stackPush($valueLeft ^ $valueRight);
+				break;
+				case JavaOpcodes::OP_IOR:
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					$this->stackPush($valueLeft | $valueRight);
 				break;
 				case JavaOpcodes::OP_IAND:
 					$valueRight = $this->stackPop();

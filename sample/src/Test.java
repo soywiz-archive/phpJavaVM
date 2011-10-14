@@ -22,6 +22,11 @@ public class Test {
 		} catch (Exception exception) {
 			exception.printStackTrace();
 		}
+		test13_int_arithmetic();
+		test14_int_logic();
+		test15_bool_logic();
+		test16_branches_0();
+		test17_branches_n();
 	}
 	
 	static public void test1() {
@@ -114,5 +119,53 @@ public class Test {
 		MessageDigest md = MessageDigest.getInstance("MD5");
 		byte[] thedigest = md.digest(bytesOfMessage);
 		System.out.println("test12:" + getHexString(thedigest));
+	}
+	
+	static public void test13_int_arithmetic() {
+		int a = 1;
+		int b = 17;
+		int c = 7777777;
+		int d = 3;
+		int e = (((a + b) * c) / 1000) - d;
+		System.out.println(e);
+	}
+	
+	static public void test14_int_logic() {
+		int a = 3;
+		int b = 4;
+		int c = 7;
+		int d = 33;
+		//int e = 99;
+		System.out.println(~(a ^ b | c & d));
+	}
+	
+	static public void test15_bool_logic() {
+		boolean a = false;
+		boolean b = true;
+		boolean c = true;
+		
+		System.out.println(!((a || b) && c));
+	}
+	
+	static public void test16_branches_0() {
+		int l = 0;
+		if (l < 0) System.out.print("y"); else System.out.print("n");  
+		if (l > 0) System.out.print("y"); else System.out.print("n");
+		if (l == 0) System.out.print("y"); else System.out.print("n");
+		if (l != 0) System.out.print("y"); else System.out.print("n");
+		if (l <= 0) System.out.print("y"); else System.out.print("n");
+		if (l >= 0) System.out.print("y"); else System.out.print("n");
+		System.out.println("");
+	}
+	
+	static public void test17_branches_n() {
+		int l = 0, r = 1;
+		if (l < r) System.out.print("y"); else System.out.print("n");
+		if (l > r) System.out.print("y"); else System.out.print("n");
+		if (l == r) System.out.print("y"); else System.out.print("n");
+		if (l != r) System.out.print("y"); else System.out.print("n");
+		if (l <= r) System.out.print("y"); else System.out.print("n");
+		if (l >= r) System.out.print("y"); else System.out.print("n");
+		System.out.println("");
 	}
 }
