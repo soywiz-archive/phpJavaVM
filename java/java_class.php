@@ -33,19 +33,34 @@ struct Class_File_Format {
 }
 */
 
-class JavaClassFile {
+class JavaClass {
+	public $magic;
+	public $minor_version;
+	public $major_version;
+	public $contant_pool_count;
+	public $constantPool;
+		
+	public $access_flags;
+	public $this_class;
+	public $super_class;
+	
+	public $interfaces_count;
+	public $interfaces;
+	
+	public $fields_count;
+	public $fields;
+	
+	public $methods_count;
+	public $methods;
+	
+	public $attributes_count;
+	public $attributes;
+
 	public function __construct() {
 		$this->constantPool = new JavaConstantPool();
 	}
 	
-	public $constantPool;
-	
-	public function readClassFile($f) {
-		$magic              = fread4_be($f);
-		$minor_version      = fread2_be($f);
-		$major_version      = fread2_be($f);
-		$contant_pool_count = fread2_be($f);
-
+	public function getMajorVersionString() {
 		static $major_version_map = array(
 			51 => 'J2SE 7',
 			50 => 'J2SE 6.0',
@@ -56,50 +71,50 @@ class JavaClassFile {
 			45 => 'JDK 1.1',
 		);
 		
-		$major_version_string = $major_version_map[$major_version];
-		
-		for ($index = 1; $index < $contant_pool_count; $index++) {
-			//printf("%08X\n", ftell($f));
-			$JavaConstant = $this->readConstantPoolInfo($f);
-			$this->constantPool->add($index, $JavaConstant);
-			echo "{$index}: {$JavaConstant}\n";
-		}
-		
-		$access_flags = fread2_be($f);
-		$this_class = fread2_be($f);
-		$super_class = fread2_be($f);
-		
-		$interfaces_count = fread2_be($f);
-		$interfaces = array();
-		for ($n = 0; $n < $interfaces_count; $n++) {
-			$interfaces[] = fread2_be($f);
-		}
-		//print_r($interfaces);
+		return $major_version_map[$this->major_version];
+	}
+	
+	public function getName() {
+		return $this->constantPool->get($this->this_class)->getClassName();
+	}
+	
+	public function readClassFile($f) {
+		$this->magic              = fread4_be($f);
+		$this->minor_version      = fread2_be($f);
+		$this->major_version      = fread2_be($f);
+		$this->contant_pool_count = fread2_be($f);
 
-		$fields_count = fread2_be($f);
-		$fields = array();
-		for ($n = 0; $n < $fields_count; $n++) {
-			$fields[] = $this->readFieldInfo($f);
+		for ($index = 1; $index < $this->contant_pool_count; $index++) {
+			$this->constantPool->add($index, $this->readConstantPoolInfo($f));
 		}
-		//print_r($fields);
-
-		$methods_count = fread2_be($f);
-		$methods = array();
-		for ($n = 0; $n < $methods_count; $n++) {
-			$method = $this->readMethodInfo($f);
-			$methods[] = $method;
-			$method_data = $method->attributes[0]->data;
-			//print_r(unpack('H*', $method_data));
-			//print_r($method);
-			$javaDisassembler = new JavaDisassembler($this->constantPool, $method_data);
-			$javaDisassembler->disasm();
-		}
-		//print_r($methods);
 		
-		$attributes_count = fread2_be($f);
-		$attributes = array();
-		for ($n = 0; $n < $attributes_count; $n++) {
-			$attributes[] = $this->readAttributeInfo($f);
+		$this->access_flags = fread2_be($f);
+		$this->this_class = fread2_be($f);
+		$this->super_class = fread2_be($f);
+		
+		$this->interfaces_count = fread2_be($f);
+		$this->interfaces = array();
+		for ($n = 0; $n < $this->interfaces_count; $n++) {
+			$this->interfaces[] = fread2_be($f);
+		}
+
+		$this->fields_count = fread2_be($f);
+		$this->fields = array();
+		for ($n = 0; $n < $this->fields_count; $n++) {
+			$this->fields[] = $this->readFieldInfo($f);
+		}
+
+		$this->methods_count = fread2_be($f);
+		$this->methods = array();
+		for ($n = 0; $n < $this->methods_count; $n++) {
+			$method = new JavaMethod($this->readMethodInfo($f));
+			$this->methods[$method->name] = $method;
+		}
+		
+		$this->attributes_count = fread2_be($f);
+		$this->attributes = array();
+		for ($n = 0; $n < $this->attributes_count; $n++) {
+			$this->attributes[] = $this->readAttributeInfo($f);
 		}
 	}
 
@@ -199,7 +214,7 @@ class JavaClassFile {
 		for ($n = 0; $n < $attributes_count; $n++) {
 			$attributes[] = $this->readAttributeInfo($f);
 		}
-		return new JavaMethod($this->constantPool, $access_flags, $name_index, $descriptor_index, $attributes);
+		return new JavaMemberInfo($this->constantPool, $access_flags, $name_index, $descriptor_index, $attributes);
 	}
 	
 	protected function readMethodInfo($f) {
@@ -214,11 +229,83 @@ class JavaClassFile {
 		$attribute_name_index = fread2_be($f);
 		$attribute_length = fread4_be($f);
 		$attribute_data = fread($f, $attribute_length);
-		return new JavaAttribute($this->constantPool, $attribute_name_index, $attribute_data);
+		return new JavaAttributeInfo($this->constantPool, $attribute_name_index, $attribute_data);
 	}
 }
 
-class JavaAttribute {
+class JavaMethod {
+	/**
+	 * @var JavaCode
+	 */
+	public $code;
+	
+	/**
+	 * @var String
+	 */
+	public $name;
+	
+	/**
+	 * @var JavaMemberInfo
+	 */
+	public $memberInfo;
+	
+	public function __construct(JavaMemberInfo $memberInfo) {
+		$this->memberInfo = $memberInfo;
+		$this->name = $memberInfo->getName();
+		foreach ($memberInfo->attributes as $attribute) {
+			if ($attribute->getName() == 'Code') {
+				$this->code = new JavaCode($attribute);
+			}
+		}
+	}
+}
+
+/*
+	Code_attribute {
+		u2 attribute_name_index;
+		u4 attribute_length;
+		u2 max_stack;
+		u2 max_locals;
+		u4 code_length;
+		u1 code[code_length];
+		u2 exception_table_length;
+		{    	u2 start_pc;
+				u2 end_pc;
+				u2  handler_pc;
+				u2  catch_type;
+		}	exception_table[exception_table_length];
+		u2 attributes_count;
+		attribute_info attributes[attributes_count];
+	}
+*/
+
+class JavaCode {
+	public $constantPool;
+	public $f;
+	public $max_stacks;
+	public $max_locals;
+	public $code_length;
+	public $code;
+	public $fcode;
+
+	public function __construct(JavaAttributeInfo $codeAttribute) {
+		$this->constantPool = $codeAttribute->constantPool;
+		
+		$name = $codeAttribute->constantPool->get($codeAttribute->name_index)->string;
+		if ($name != 'Code') throw(new Exception("Not a java code"));
+		
+		$this->f = $f = string_to_stream($codeAttribute->data);
+		$this->max_stacks  = fread2_be($f);
+		$this->max_locals  = fread2_be($f);
+		$this->code_length = fread4_be($f);
+		$this->code        = fread($f, $this->code_length);
+		$this->fcode       = string_to_stream($this->code);
+		
+		// @TODO exceptions
+	}
+}
+
+class JavaAttributeInfo {
 	public $constantPool;
 	public $name_index;
 	public $data;
@@ -228,4 +315,34 @@ class JavaAttribute {
 		$this->name_index = $name_index;
 		$this->data = $data;
 	}
+	
+	public function getName() {
+		return $this->constantPool->get($this->name_index)->string;
+	}
+}
+
+class JavaMemberInfo {
+	public $constantPool;
+	public $access_flags;
+	public $name_index;
+	public $descriptor_index;
+	public $attributes;
+
+	public function __construct(JavaConstantPool $constantPool, $access_flags, $name_index, $descriptor_index, $attributes) {
+		$this->constantPool = $constantPool;
+		$this->access_flags = $access_flags;
+		$this->name_index = $name_index;
+		$this->descriptor_index = $descriptor_index;
+		$this->attributes = $attributes;
+	}
+	
+	public function getName() {
+		return $this->constantPool->get($this->name_index)->string;
+	}
+}
+
+class JavaMethodInfo extends JavaMemberInfo {
+}
+
+class JavaFieldInfo extends JavaMemberInfo {
 }
