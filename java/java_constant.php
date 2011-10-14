@@ -40,6 +40,27 @@ class JavaConstant {
 	}
 }
 
+class JavaConstantValue extends JavaConstant {
+	public $value;
+
+	public function __construct(JavaConstantPool $constantPool, $value) {
+		parent::__construct($constantPool);
+		$this->value = $value;
+	}
+
+	public function getValue() {
+		return $this->value;
+	}
+}
+
+class JavaConstantInt extends JavaConstantValue {
+	
+}
+
+class JavaConstantFloat extends JavaConstantValue {
+
+}
+
 class JavaConstantStringReference extends JavaConstant {
 	public $classStringIndex;
 

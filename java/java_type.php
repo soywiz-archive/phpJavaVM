@@ -26,6 +26,18 @@ class JavaTypeMethod extends JavaType {
 	}
 }
 
+class JavaTypeArray extends JavaType {
+	public $type;
+
+	public function __construct($type) {
+		$this->type = $type;
+	}
+
+	public function __toString() {
+		return 'JavaTypeArray(' . $this->type . ')';
+	}
+}
+
 class JavaTypeIntegral extends JavaType {
 	public $integralType;
 
@@ -44,32 +56,52 @@ class JavaTypeIntegralVoid extends JavaTypeIntegral {
 	}
 }
 
+class JavaTypeIntegralByte extends JavaTypeIntegral {
+	public function __construct() {
+		parent::__construct('byte');
+	}
+}
+
+class JavaTypeIntegralShort extends JavaTypeIntegral {
+	public function __construct() {
+		parent::__construct('short');
+	}
+}
+
 class JavaTypeIntegralInt extends JavaTypeIntegral {
 	public function __construct() {
 		parent::__construct('int');
 	}
 }
 
+
 class JavaType {
-	static public function parse($f) {
-		if (is_string($f)) $f = string_to_stream($f);
+	static public function parse($f, $ori_str = NULL) {
+		if (is_string($f)) $f = string_to_stream($ori_str = $f);
 	
 		$t = fread($f, 1);
 		switch ($t) {
 			// Function
 			case '(':
 				$params = array();
-				while (($p = static::parse($f)) !== NULL) {
+				while (($p = static::parse($f, $ori_str)) !== NULL) {
 					$params[] = $p;
 				}
-				$return = static::parse($f);
+				$return = static::parse($f, $ori_str);
 				return new JavaTypeMethod($params, $return);
+			break;
+			// Array
+			case '[':
+				$arrayType = static::parse($f, $ori_str);
+				return new JavaTypeArray($arrayType);
 			break;
 			case ')': return NULL;
 			case 'V': return new JavaTypeIntegralVoid();
+			case 'B': return new JavaTypeIntegralByte();
+			case 'S': return new JavaTypeIntegralShort();
 			case 'I': return new JavaTypeIntegralInt();
 			case 'L': return new JavaTypeClass(fread_until($f, ';'));
-			default: throw(new Exception("Unknown java type '{$t}'"));
+			default: throw(new Exception("Unknown java type '{$t}' on '{$ori_str}'"));
 		}
 	}
 	

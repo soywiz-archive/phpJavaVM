@@ -175,13 +175,16 @@ class JavaClass {
 				return new JavaConstantString($this->constantPool, fread($f, $stringLength));
 
 			case self::CONSTANT_Integer:
-				break;
+				$value = fread4_be_s($f);
+				return new JavaConstantInt($this->constantPool, $value);
+
 			case self::CONSTANT_Float:
 				break;
 			case self::CONSTANT_Long:
 				break;
 			case self::CONSTANT_Double:
 				break;
+
 			case self::CONSTANT_Class:
 				$classStringIndex = fread2_be($f);
 				return new JavaConstantClassReference($this->constantPool, $classStringIndex);
@@ -202,6 +205,7 @@ class JavaClass {
 				
 			case self::CONSTANT_InterfaceMethodref:
 				break;
+
 			case self::CONSTANT_NameAndType:
 				$identifierNameStringIndex = fread2_be($f);
 				$typeDescriptorStringIndex = fread2_be($f);

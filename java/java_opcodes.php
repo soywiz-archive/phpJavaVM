@@ -212,23 +212,64 @@ class JavaOpcodes {
 	const OP_IMPDEP2 = 0xff	 ;
 	
 	static public $OPCODES = array(
-		self::OP_ALOAD_0       => array(''), // Load reference from local variable
+		self::OP_ALOAD_0       => array(''),  // Load reference from local variable
 		self::OP_RETURN        => array(''),
 		self::OP_GETSTATIC     => array('2'),
-		self::OP_INVOKESPECIAL => array('2'), // Invoke instance method; special handling for superclass, private, and instance initialization method invocations
-		self::OP_INVOKEVIRTUAL => array('2'), // Invoke instance method; dispatch based on class
-		self::OP_LDC           => array('1'), // Push item from runtime constant pool
-		self::OP_BIPUSH        => array('b'), // Push byte
-		self::OP_ISTORE_0      => array(''),  // Store int into local variable
-		self::OP_ISTORE_1      => array(''),  // Store int into local variable
-		self::OP_ISTORE_2      => array(''),  // Store int into local variable
-		self::OP_ISTORE_3      => array(''),  // Store int into local variable
-		self::OP_NEW           => array('2'), // Create new object
-		self::OP_DUP           => array(''),  // Duplicate the top operand stack value
-		self::OP_ILOAD_0       => array(''),  // Load int from local variable
-		self::OP_ILOAD_1       => array(''),  // Load int from local variable
-		self::OP_ILOAD_2       => array(''),  // Load int from local variable
-		self::OP_ILOAD_3       => array(''),  // Load int from local variable
+		self::OP_INVOKESPECIAL => array('2'),  // Invoke instance method; special handling for superclass, private, and instance initialization method invocations
+		self::OP_INVOKEVIRTUAL => array('2'),  // Invoke instance method; dispatch based on class
+		self::OP_INVOKESTATIC  => array('2'),  // Invoke a class (static) method
+		self::OP_LDC           => array('1'),  // Push item from runtime constant pool
+		self::OP_BIPUSH        => array('b'),  // Push byte
+		self::OP_SIPUSH        => array('w'),  // Push byte
+		
+		self::OP_ISTORE_0      => array(''),   // Store int into local variable
+		self::OP_ISTORE_1      => array(''),   // Store int into local variable
+		self::OP_ISTORE_2      => array(''),   // Store int into local variable
+		self::OP_ISTORE_3      => array(''),   // Store int into local variable
+		
+		self::OP_ASTORE_0      => array(''),   // Store reference into local variable
+		self::OP_ASTORE_1      => array(''),   // Store reference into local variable
+		self::OP_ASTORE_2      => array(''),   // Store reference into local variable
+		self::OP_ASTORE_3      => array(''),   // Store reference into local variable
+		
+		self::OP_NEW           => array('2'),  // Create new object
+		self::OP_DUP           => array(''),   // Duplicate the top operand stack value
+		
+		self::OP_ILOAD_0       => array(''),   // Load int from local variable
+		self::OP_ILOAD_1       => array(''),   // Load int from local variable
+		self::OP_ILOAD_2       => array(''),   // Load int from local variable
+		self::OP_ILOAD_3       => array(''),   // Load int from local variable
+
+		self::OP_ALOAD_0       => array(''),   // Load reference from local variable
+		self::OP_ALOAD_1       => array(''),   // Load reference from local variable
+		self::OP_ALOAD_2       => array(''),   // Load reference from local variable
+		self::OP_ALOAD_3       => array(''),   // Load reference from local variable
+	
+		self::OP_ICONST_0      => array(''),   // Push int constant
+		self::OP_ICONST_1      => array(''),   // Push int constant
+		self::OP_ICONST_2      => array(''),   // Push int constant
+		self::OP_ICONST_3      => array(''),   // Push int constant
+		self::OP_ICONST_4      => array(''),   // Push int constant
+		self::OP_ICONST_5      => array(''),   // Push int constant
+		self::OP_GOTO          => array('w'),  // Branch always
+		
+		self::OP_IINC          => array('bb'), // Increment local variable by constant
+		self::OP_IMUL          => array(''),   // Multiply int
+		
+		self::OP_I2B           => array(''),   // Convert int to byte
+		
+		self::OP_BASTORE       => array(''),   // Store into byte or boolean array
+		self::OP_BALOAD        => array(''),   // Load byte or boolean from array
+		self::OP_AASTORE       => array(''),   // Store into reference array
+		self::OP_ARRAYLENGTH   => array(''),   // Get length of array
+		
+		self::OP_IF_ICMPLT     => array('w'),  // Branch if int comparison succeeds
+		self::OP_IFGE          => array('w'),  // Branch if int comparison with zero succeeds
+		
+		self::OP_NEWARRAY      => array('b'),  // Create new array 
+		self::OP_ANEWARRAY     => array('2'),  // Create new array of reference
+		
+		
 	);
 	
 	static public function getOpcodeName($opcodeId) {
