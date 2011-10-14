@@ -25,6 +25,10 @@ class JavaDisassembler {
 			for ($n = 0; $n < strlen($paramsString); $n++) {
 				$paramType = $paramsString[$n];
 				switch ($paramType) {
+					case 'b':
+						$param = fread1($f);
+						printf("  PARAM: %d\n", $param);
+					break;
 					case '1':
 						$param = fread1($f);
 						printf("  PARAM: %d (%s)\n", $param, $this->code->constantPool->get($param)->getNormalizedString());

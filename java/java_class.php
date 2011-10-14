@@ -34,30 +34,39 @@ struct Class_File_Format {
 */
 
 class JavaClass {
-	public $magic;
-	public $minor_version;
-	public $major_version;
-	public $contant_pool_count;
-	public $constantPool;
+	protected $magic;
+	protected $minor_version;
+	protected $major_version;
+	protected $contant_pool_count;
+	protected $constantPool;
 		
-	public $access_flags;
-	public $this_class;
-	public $super_class;
+	protected $access_flags;
+	protected $this_class;
+	protected $super_class;
 	
-	public $interfaces_count;
-	public $interfaces;
+	protected $interfaces_count;
+	protected $interfaces;
 	
-	public $fields_count;
-	public $fields;
+	protected $fields_count;
+	protected $fields;
 	
-	public $methods_count;
-	public $methods;
+	protected $methods_count;
+	protected $methods;
 	
-	public $attributes_count;
-	public $attributes;
+	protected $attributes_count;
+	protected $attributes;
 
 	public function __construct() {
 		$this->constantPool = new JavaConstantPool();
+	}
+	
+	/**
+	 * @param string $name
+	 * 
+	 * @return JavaMethod
+	 */
+	public function getMethod($name) {
+		return $this->methods[$name];
 	}
 	
 	public function getMajorVersionString() {
@@ -257,6 +266,11 @@ class JavaMethod {
 				$this->code = new JavaCode($attribute);
 			}
 		}
+	}
+	
+	public function disasm() {
+		$javaDisassembler = new JavaDisassembler($this->code);
+		$javaDisassembler->disasm();
 	}
 }
 
