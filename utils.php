@@ -18,6 +18,14 @@ function value_get_int($value) {
 	return $v;
 }
 
+function string_to_array($str) {
+	$array = array();
+	for ($n = 0; $n < strlen($str); $n++) {
+		$array[] = ord($str[$n]);
+	}
+	return $array;
+}
+
 // Unsigned freads
 function fread1($f) {
 	return ord(fread($f, 1));

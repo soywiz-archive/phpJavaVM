@@ -2,12 +2,16 @@
 
 require_once(__DIR__ . '/jre/java_lang.php');
 require_once(__DIR__ . '/jre/java_io.php');
+require_once(__DIR__ . '/jre/java_util.php');
+require_once(__DIR__ . '/jre/java_security.php');
 
 \java\lang\System::$out = new \java\io\PrintStream(fopen('php://output', 'wb'));
 
 class JavaInterpreter {
 	public $classes = array();
 	public $stack = array();
+	public $autoDisasm = false;
+	public $autoTrace  = false;
 
 	public function addClass(JavaClass $javaClass) {
 		$this->classes[$javaClass->getName()] = $javaClass;
@@ -17,7 +21,7 @@ class JavaInterpreter {
 		/* @var $class JavaClass */
 		$class = $this->classes[$className];
 		$method = $class->getMethod($methodName);
-		$this->interpret($method->code, $params);
+		return $this->interpret($method->code, $params);
 	}
 	
 	protected function stackPush($value) {
@@ -56,11 +60,19 @@ class JavaInterpreter {
 		return $phpClassName::$$fieldName;
 	}
 	
-	protected function _callMethod($func, $params) {
+	protected function _callMethod($invokeStatic, $func, $params) {
 		// Static call.
 		if (is_string($func[0])) {
 			if (isset($this->classes[$func[0]])) {
 				return $this->callStatic($func[0], $func[1], $params);
+			}
+		}
+
+		if (!$invokeStatic) {
+			if (is_int($func[0])) {
+				$func[0] = new \java\lang\Integer($func[0]);
+			} else if (is_string($func[0])) {
+				$func[0] = new \java\lang\String($func[0]);
 			}
 		}
 		
@@ -86,6 +98,14 @@ class JavaInterpreter {
 			
 		$paramsCount = count($methodType->params);
 		$params = $this->stackPopArray($paramsCount);
+		
+		/* @var $paramType JavaType */
+		foreach ($methodType->params as $k => $paramType) {
+			if ($paramType instanceof JavaTypeIntegralChar) {
+				$params[$k] = chr($params[$k]);
+			}
+		}
+		
 		if (!$invokeStatic) {
 			$object = $this->stackPop();
 		}
@@ -100,7 +120,7 @@ class JavaInterpreter {
 			$func = array($this->getPhpClassNameFromJavaClassName($methodRef->getClassReference()->getClassName()), $methodName);
 		}
 
-		$returnValue = $this->_callMethod($func, $params);
+		$returnValue = $this->_callMethod($invokeStatic, $func, $params);
 		
 		if (!($methodType->return instanceof JavaTypeIntegralVoid)) {
 			$this->stackPush($returnValue);
@@ -110,11 +130,15 @@ class JavaInterpreter {
 	}
 	
 	protected function interpret(JavaCode $code, $params = array()) {
+		if ($this->autoDisasm) {
+			$code->disasm();
+			//$javaClass->getMethod($methodName)->disasm();
+		}
+		
 		$locals = array();
 		foreach ($params as $k => $param) $locals[$k] = $param;
 		
-		//$trace = true;
-		$trace = false;
+		$trace = $this->autoTrace;
 		
 		$f = string_to_stream($code->code); fseek($f, 0);
 		//$javaDisassembler = new JavaDisassembler($code); $javaDisassembler->disasm(); 
@@ -194,10 +218,29 @@ class JavaInterpreter {
 
 					$this->callMethodStack($methodRef, $invokeStatic = ($op == JavaOpcodes::OP_INVOKESTATIC));
 				break;
+				case JavaOpcodes::OP_INVOKEINTERFACE:
+					$param0 = fread2_be($f);
+					$param1 = fread1_s($f);
+					$param2 = fread1_s($f);
+					/* @var $methodRef JavaConstantMethodReference */
+					$methodRef = $code->constantPool->get($param0);
+					
+					$this->callMethodStack($methodRef, $invokeStatic = false);
+					
+					break;
 				case JavaOpcodes::OP_GOTO:
 					$relativeAddress = fread2_be_s($f);
 					fseek($f, $instruction_offset + $relativeAddress);
 				break;
+				case JavaOpcodes::OP_IF_ICMPNE:
+					$relativeAddress = fread2_be_s($f);
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					if ($valueLeft != $valueRight) {
+						fseek($f, $instruction_offset + $relativeAddress);
+					}
+					//echo "$valueLeft; $valueRight\n";
+					break;
 				case JavaOpcodes::OP_IF_ICMPLT:
 					$relativeAddress = fread2_be_s($f);
 					$valueRight = $this->stackPop();
@@ -216,15 +259,34 @@ class JavaInterpreter {
 					}
 					//echo "$valueLeft; $valueRight\n";
 				break;
+				case JavaOpcodes::OP_IFNE:
+					$relativeAddress = fread2_be_s($f);
+					$valueRight = 0;
+					$valueLeft  = $this->stackPop();
+					if ($valueLeft != $valueRight) {
+						fseek($f, $instruction_offset + $relativeAddress);
+					}
+					//echo "$valueLeft; $valueRight\n";
+				break;
 				case JavaOpcodes::OP_IINC:
 					$param0 = fread1($f);
 					$param1 = fread1_s($f);
 					$locals[$param0] += $param1;
 				break;
+				case JavaOpcodes::OP_IADD:
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					$this->stackPush($valueLeft + $valueRight);
+				break;
 				case JavaOpcodes::OP_IMUL:
 					$valueRight = $this->stackPop();
 					$valueLeft  = $this->stackPop();
 					$this->stackPush($valueLeft * $valueRight);
+				break;
+				case JavaOpcodes::OP_IAND:
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					$this->stackPush($valueLeft & $valueRight);
 				break;
 				case JavaOpcodes::OP_I2B:
 					$this->stackPush(value_get_byte($this->stackPop()));
@@ -278,6 +340,15 @@ class JavaInterpreter {
 					}
 					$this->stackPush($array[$index]);
 				break;
+				case JavaOpcodes::OP_POP:
+					$this->stackPop();
+				break;
+				case JavaOpcodes::OP_CHECKCAST:
+					$classIndex = fread2_be($f);
+					$value = $this->stackPop();
+					// @TODO: Check the type.
+					$this->stackPush($value);
+				break;
 				case JavaOpcodes::OP_DUP:
 					$v = $this->stackPop();
 					$this->stackPush($v);
@@ -285,6 +356,10 @@ class JavaInterpreter {
 				break;
 				case JavaOpcodes::OP_RETURN:
 					return;
+				break;
+				case JavaOpcodes::OP_ARETURN:
+				case JavaOpcodes::OP_IRETURN:
+					return $this->stackPop();
 				break;
 				default: throw(new Exception(sprintf("Don't know how to interpret opcode(0x%02X) : %s", $op, JavaOpcodes::getOpcodeName($op))));
 			}

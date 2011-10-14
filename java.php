@@ -15,9 +15,12 @@ $javaClass->readClassFile(fopen('Sample/bin/Test.class', 'rb'));
 $javaInterpreter = new JavaInterpreter();
 $javaInterpreter->addClass($javaClass);
 
-$methodName = 'test8';
+$params = array();
+
 $methodName = 'main';
+//$methodName = 'test12';
 
-//$javaClass->getMethod($methodName)->disasm();
+//$javaInterpreter->autoDisasm = true;
+//$javaInterpreter->autoTrace  = true;
 
-$javaInterpreter->callStatic('Test', $methodName);
+$javaInterpreter->callStatic('Test', $methodName, $params);

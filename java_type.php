@@ -56,9 +56,21 @@ class JavaTypeIntegralVoid extends JavaTypeIntegral {
 	}
 }
 
+class JavaTypeIntegralBool extends JavaTypeIntegral {
+	public function __construct() {
+		parent::__construct('bool');
+	}
+}
+
 class JavaTypeIntegralByte extends JavaTypeIntegral {
 	public function __construct() {
 		parent::__construct('byte');
+	}
+}
+
+class JavaTypeIntegralChar extends JavaTypeIntegral {
+	public function __construct() {
+		parent::__construct('char');
 	}
 }
 
@@ -97,7 +109,9 @@ class JavaType {
 			break;
 			case ')': return NULL;
 			case 'V': return new JavaTypeIntegralVoid();
+			case 'Z': return new JavaTypeIntegralBool();
 			case 'B': return new JavaTypeIntegralByte();
+			case 'C': return new JavaTypeIntegralChar();
 			case 'S': return new JavaTypeIntegralShort();
 			case 'I': return new JavaTypeIntegralInt();
 			case 'L': return new JavaTypeClass(fread_until($f, ';'));

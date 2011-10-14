@@ -213,11 +213,18 @@ class JavaOpcodes {
 	
 	static public $OPCODES = array(
 		self::OP_ALOAD_0       => array(''),  // Load reference from local variable
-		self::OP_RETURN        => array(''),
-		self::OP_GETSTATIC     => array('2'),
-		self::OP_INVOKESPECIAL => array('2'),  // Invoke instance method; special handling for superclass, private, and instance initialization method invocations
-		self::OP_INVOKEVIRTUAL => array('2'),  // Invoke instance method; dispatch based on class
-		self::OP_INVOKESTATIC  => array('2'),  // Invoke a class (static) method
+		
+		self::OP_RETURN        => array(''),  //
+		self::OP_IRETURN       => array(''),  //
+		self::OP_ARETURN       => array(''),  // 
+	
+		self::OP_GETSTATIC     => array('2'), // 
+		
+		self::OP_INVOKESPECIAL   => array('2'),    // Invoke instance method; special handling for superclass, private, and instance initialization method invocations
+		self::OP_INVOKEVIRTUAL   => array('2'),    // Invoke instance method; dispatch based on class
+		self::OP_INVOKESTATIC    => array('2'),    // Invoke a class (static) method
+		self::OP_INVOKEINTERFACE => array('2bb'),  // Invoke interface method
+		
 		self::OP_LDC           => array('1'),  // Push item from runtime constant pool
 		self::OP_BIPUSH        => array('b'),  // Push byte
 		self::OP_SIPUSH        => array('w'),  // Push byte
@@ -254,9 +261,16 @@ class JavaOpcodes {
 		self::OP_GOTO          => array('w'),  // Branch always
 		
 		self::OP_IINC          => array('bb'), // Increment local variable by constant
+		self::OP_IADD          => array('bb'), // 
 		self::OP_IMUL          => array(''),   // Multiply int
+		self::OP_IAND          => array(''),   // 
+		
+		self::OP_LMUL          => array(''),   // Multiply long
 		
 		self::OP_I2B           => array(''),   // Convert int to byte
+		
+		self::OP_POP           => array(''),   // Pop the top operand stack value
+		self::OP_CHECKCAST     => array('2'),  // Check whether object is of given type
 		
 		self::OP_BASTORE       => array(''),   // Store into byte or boolean array
 		self::OP_BALOAD        => array(''),   // Load byte or boolean from array
@@ -264,7 +278,11 @@ class JavaOpcodes {
 		self::OP_ARRAYLENGTH   => array(''),   // Get length of array
 		
 		self::OP_IF_ICMPLT     => array('w'),  // Branch if int comparison succeeds
+		self::OP_IF_ICMPNE     => array('w'),  // Branch if int comparison succeeds
+	
+		
 		self::OP_IFGE          => array('w'),  // Branch if int comparison with zero succeeds
+		self::OP_IFNE          => array('w'),  // Branch if int comparison with zero succeeds
 		
 		self::OP_NEWARRAY      => array('b'),  // Create new array 
 		self::OP_ANEWARRAY     => array('2'),  // Create new array of reference
