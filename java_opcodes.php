@@ -218,6 +218,17 @@ class JavaOpcodes {
 		self::OP_INVOKESPECIAL => array('2'), // Invoke instance method; special handling for superclass, private, and instance initialization method invocations
 		self::OP_INVOKEVIRTUAL => array('2'), // Invoke instance method; dispatch based on class
 		self::OP_LDC           => array('1'), // Push item from runtime constant pool
+		self::OP_BIPUSH        => array('b'), // Push byte
+		self::OP_ISTORE_0      => array(''),  // Store int into local variable
+		self::OP_ISTORE_1      => array(''),  // Store int into local variable
+		self::OP_ISTORE_2      => array(''),  // Store int into local variable
+		self::OP_ISTORE_3      => array(''),  // Store int into local variable
+		self::OP_NEW           => array('2'), // Create new object
+		self::OP_DUP           => array(''),  // Duplicate the top operand stack value
+		self::OP_ILOAD_0       => array(''),  // Load int from local variable
+		self::OP_ILOAD_1       => array(''),  // Load int from local variable
+		self::OP_ILOAD_2       => array(''),  // Load int from local variable
+		self::OP_ILOAD_3       => array(''),  // Load int from local variable
 	);
 	
 	static public function getOpcodeName($opcodeId) {
