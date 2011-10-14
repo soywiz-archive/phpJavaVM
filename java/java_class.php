@@ -204,7 +204,9 @@ class JavaClass {
 				return new JavaConstantMethodReference($this->constantPool, $classReferenceIndex, $nameTypeDescriptorIndex);
 				
 			case self::CONSTANT_InterfaceMethodref:
-				break;
+				$classReferenceIndex     = fread2_be($f);
+				$nameTypeDescriptorIndex = fread2_be($f);
+				return new JavaConstantInterfaceMethodReference($this->constantPool, $classReferenceIndex, $nameTypeDescriptorIndex);
 
 			case self::CONSTANT_NameAndType:
 				$identifierNameStringIndex = fread2_be($f);
@@ -273,8 +275,7 @@ class JavaMethod {
 	}
 	
 	public function disasm() {
-		$javaDisassembler = new JavaDisassembler($this->code);
-		$javaDisassembler->disasm();
+		$this->code->disasm();
 	}
 }
 
@@ -320,6 +321,11 @@ class JavaCode {
 		$this->fcode       = string_to_stream($this->code);
 		
 		// @TODO exceptions
+	}
+	
+	public function disasm() {
+		$javaDisassembler = new JavaDisassembler($this);
+		$javaDisassembler->disasm();
 	}
 }
 

@@ -145,15 +145,21 @@ class JavaConstantMemberReference extends JavaConstant {
 	}
 }
 
+class JavaConstantFieldReference extends JavaConstantMemberReference {
+	protected function _getNormalizedStringType() {
+		return 'FIELD_REF';
+	}
+}
+
 class JavaConstantMethodReference extends JavaConstantMemberReference {
 	protected function _getNormalizedStringType() {
 		return 'METHOD_REF';
 	}
 }
 
-class JavaConstantFieldReference extends JavaConstantMemberReference {
+class JavaConstantInterfaceMethodReference extends JavaConstantMethodReference {
 	protected function _getNormalizedStringType() {
-		return 'FIELD_REF';
+		return 'INTERFACE_METHOD_REF';
 	}
 }
 
