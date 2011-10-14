@@ -1,3 +1,0 @@
-@dll user32
-@calltype CALL_TYPE_WINDOWS
-@function "MessageBox", "issi", "MessageBoxA"
