@@ -1,5 +1,13 @@
 To run this sample:
 
-```git clone git://github.com/soywiz/phpJavaVM.git```
+```shell
+git clone git://github.com/soywiz/phpJavaVM.git
+cd phpJavaVM
 
-```php java.php```
+# It will run sample/bin/Test.class with the phpJavaVM
+php java.php
+
+# You can run it too using your installed java VM to compare results
+cd sample/bin
+java Test
+```
