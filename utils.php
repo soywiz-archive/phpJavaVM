@@ -26,6 +26,10 @@ function string_to_array($str) {
 	return $array;
 }
 
+function array_to_string($bytes) {
+	return implode('', array_map('chr', $bytes));
+}
+
 // Unsigned freads
 function fread1($f) {
 	return ord(fread($f, 1));

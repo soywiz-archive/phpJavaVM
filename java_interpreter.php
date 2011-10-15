@@ -1,11 +1,24 @@
 <?php
 
-require_once(__DIR__ . '/jre/java_lang.php');
-require_once(__DIR__ . '/jre/java_io.php');
-require_once(__DIR__ . '/jre/java_util.php');
-require_once(__DIR__ . '/jre/java_security.php');
+spl_autoload_register(function($className) {
+	if (substr($className, 0, 5) == 'java\\') {
+		//str_replace('\\', '_');
+		$pos = strrpos($className, '\\');
+		$package = substr($className, 0, $pos);
+		$class = substr($className, $pos + 1);
+		require_once(__DIR__ . '/jre/' . basename(str_replace('\\', '_', $package)) . '.php');
+	}
+});
 
 \java\lang\System::$out = new \java\io\PrintStream(fopen('php://output', 'wb'));
+
+function IUSHR($l, $r) {
+	//printf("%032b, %d\n", $l, $r);
+	$v = ($l >> $r) & ((1 << (32 - $r)) - 1);
+	//printf("%032b, %d\n", $v, $r);
+	//exit;
+	return $v;
+}
 
 class JavaInterpreter {
 	public $classes = array();
@@ -201,6 +214,7 @@ class JavaInterpreter {
 					
 					$this->stackPush($constant->getValue());
 				break;
+				case JavaOpcodes::OP_ASTORE:
 				case JavaOpcodes::OP_ISTORE:
 					$index = fread1($f);
 					$locals[$index] = $this->stackPop();
@@ -217,16 +231,17 @@ class JavaInterpreter {
 				case JavaOpcodes::OP_ASTORE_3:
 					$locals[$op - JavaOpcodes::OP_ASTORE_0] = $this->stackPop();
 				break;
+				case JavaOpcodes::OP_ALOAD:
+				case JavaOpcodes::OP_ILOAD:
+					$index = fread1($f);
+					$this->stackPush($locals[$index]);
+				break;
 				// @OTOD. BUG. It is a reference not the value itself!
 				case JavaOpcodes::OP_ALOAD_0:
 				case JavaOpcodes::OP_ALOAD_1:
 				case JavaOpcodes::OP_ALOAD_2:
 				case JavaOpcodes::OP_ALOAD_3:
 					$this->stackPush($locals[$op - JavaOpcodes::OP_ALOAD_0]);
-				break;
-				case JavaOpcodes::OP_ILOAD:
-					$index = fread1($f);
-					$this->stackPush($locals[$index]);
 				break;
 				case JavaOpcodes::OP_ILOAD_0:
 				case JavaOpcodes::OP_ILOAD_1:
@@ -318,39 +333,32 @@ class JavaInterpreter {
 					$locals[$param0] += $param1;
 				break;
 				case JavaOpcodes::OP_IADD:
-					$valueRight = $this->stackPop();
-					$valueLeft  = $this->stackPop();
-					$this->stackPush($valueLeft + $valueRight);
-				break;
 				case JavaOpcodes::OP_ISUB:
-					$valueRight = $this->stackPop();
-					$valueLeft  = $this->stackPop();
-					$this->stackPush($valueLeft - $valueRight);
-				break;
 				case JavaOpcodes::OP_IMUL:
-					$valueRight = $this->stackPop();
-					$valueLeft  = $this->stackPop();
-					$this->stackPush($valueLeft * $valueRight);
-				break;
 				case JavaOpcodes::OP_IDIV:
-					$valueRight = $this->stackPop();
-					$valueLeft  = $this->stackPop();
-					$this->stackPush((int)($valueLeft / $valueRight));
-				break;
 				case JavaOpcodes::OP_IXOR:
-					$valueRight = $this->stackPop();
-					$valueLeft  = $this->stackPop();
-					$this->stackPush($valueLeft ^ $valueRight);
-				break;
 				case JavaOpcodes::OP_IOR:
-					$valueRight = $this->stackPop();
-					$valueLeft  = $this->stackPop();
-					$this->stackPush($valueLeft | $valueRight);
-				break;
 				case JavaOpcodes::OP_IAND:
+				case JavaOpcodes::OP_IUSHR:
+				case JavaOpcodes::OP_ISHR:
+				{	
 					$valueRight = $this->stackPop();
 					$valueLeft  = $this->stackPop();
-					$this->stackPush($valueLeft & $valueRight);
+					$result = NULL;
+					switch ($op) {
+						case JavaOpcodes::OP_IADD: $result = (int)($valueLeft + $valueRight); break;
+						case JavaOpcodes::OP_ISUB: $result = (int)($valueLeft - $valueRight); break;
+						case JavaOpcodes::OP_IMUL: $result = (int)($valueLeft * $valueRight); break;
+						case JavaOpcodes::OP_IDIV: $result = (int)($valueLeft / $valueRight); break;
+						case JavaOpcodes::OP_IXOR: $result = (int)($valueLeft ^ $valueRight); break;
+						case JavaOpcodes::OP_IOR: $result = (int)($valueLeft | $valueRight); break;
+						case JavaOpcodes::OP_IAND: $result = (int)($valueLeft & $valueRight); break;
+						case JavaOpcodes::OP_IUSHR: $result = (int)(\IUSHR($valueLeft, $valueRight)); break;
+						case JavaOpcodes::OP_ISHR: $result = (int)($valueLeft >> $valueRight); break;
+					}
+					if ($result === NULL) throw(new Exception("Unexpected !!!"));
+					$this->stackPush($result);
+				}
 				break;
 				case JavaOpcodes::OP_I2B:
 					$this->stackPush(value_get_byte($this->stackPop()));
@@ -385,6 +393,7 @@ class JavaInterpreter {
 				break;
 				case JavaOpcodes::OP_AASTORE:
 				case JavaOpcodes::OP_BASTORE:
+				case JavaOpcodes::OP_IASTORE:
 					$value = $this->stackPop();
 					$index = $this->stackPop();
 					$array = $this->stackPop();
@@ -394,8 +403,10 @@ class JavaInterpreter {
 						echo "INDEX:"; var_dump($index);
 						echo "ARRAY:"; var_dump($array);
 					}
-					break;
+				break;
+				case JavaOpcodes::OP_AALOAD:
 				case JavaOpcodes::OP_BALOAD:
+				case JavaOpcodes::OP_IALOAD:
 					$index = $this->stackPop();
 					$array = $this->stackPop();
 					if ($trace) {

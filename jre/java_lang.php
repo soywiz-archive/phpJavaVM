@@ -82,16 +82,20 @@ class Number extends \java\lang\Object {
 	public function byteValue() {
 		return Byte::valueOf($this->value);
 	}
+
+	static public function toHexString($v) {
+		return dechex($v);
+	}
 }
 
 class Integer extends Number {
 	static public function valueOf($v) {
 		return \value_get_int($v);
 	}
+}
+
+class Long extends Number {
 	
-	static public function toHexString($v) {
-		return dechex($v);
-	}
 }
 
 class Byte extends Number {

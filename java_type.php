@@ -86,6 +86,12 @@ class JavaTypeIntegralInt extends JavaTypeIntegral {
 	}
 }
 
+class JavaTypeIntegralLong extends JavaTypeIntegral {
+	public function __construct() {
+		parent::__construct('long');
+	}
+}
+
 
 class JavaType {
 	static public function parse($f, $ori_str = NULL) {
@@ -114,6 +120,7 @@ class JavaType {
 			case 'C': return new JavaTypeIntegralChar();
 			case 'S': return new JavaTypeIntegralShort();
 			case 'I': return new JavaTypeIntegralInt();
+			case 'J': return new JavaTypeIntegralLong();
 			case 'L': return new JavaTypeClass(fread_until($f, ';'));
 			default: throw(new Exception("Unknown java type '{$t}' on '{$ori_str}'"));
 		}
