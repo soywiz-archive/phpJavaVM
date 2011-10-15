@@ -57,6 +57,10 @@ class JavaConstantInt extends JavaConstantValue {
 	
 }
 
+class JavaConstantLong extends JavaConstantValue {
+	
+}
+
 class JavaConstantFloat extends JavaConstantValue {
 
 }

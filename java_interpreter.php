@@ -20,9 +20,39 @@ function IUSHR($l, $r) {
 	return $v;
 }
 
+class JavaClassInstance {
+	/**
+	 * @var JavaInterpreter
+	 */
+	public $__javaInterpreter;
+	
+	/**
+	 * @var JavaClass
+	 */
+	public $__javaClass;
+	
+	public function __construct(JavaInterpreter $javaInterpreter, JavaClass $javaClass) {
+		$this->__javaInterpreter = $javaInterpreter;
+		$this->__javaClass = $javaClass;
+	}
+	
+	public function __call($name, $params) {
+		if ($name == '__java_constructor') {
+			$name = '<init>';
+			// @TODO @FIX Temporal hack
+			return NULL;
+		}
+		array_unshift($params, $this);
+		$code = $this->__javaClass->getMethod($name)->code;
+		//echo "Calling {$name}...\n";
+		return $this->__javaInterpreter->interpret($code, $params);
+	}
+}
+
 class JavaInterpreter {
 	public $classes = array();
 	public $stack = array();
+	public $classPaths = array();
 	public $autoDisasm = false;
 	public $autoTrace  = false;
 
@@ -30,9 +60,45 @@ class JavaInterpreter {
 		$this->classes[$javaClass->getName()] = $javaClass;
 	}
 	
+	public function addClassPath($path) {
+		$this->classPaths[] = $path;
+		/*
+		$javaClass = new JavaClass();
+		$javaClass->readClassFile(fopen('Sample/bin/Test.class', 'rb'));
+		*/
+	}
+	
+	protected function searchForClass($className) {
+		foreach ($this->classPaths as $classPath) {
+			$fullClassPath = "{$classPath}/" . basename($className) . '.class';
+			if (is_file($fullClassPath)) {
+				return $fullClassPath;
+			}
+		}
+		return NULL;
+	}
+	
+	/**
+	 * @return JavaClass
+	 */
+	public function getClass($className, $throw = true) {
+		$class = &$this->classes[$className];
+		if (!isset($class)) {
+			$fullClassPath = $this->searchForClass($className);
+			if ($fullClassPath !== NULL) {
+				$javaClass = new JavaClass();
+				$javaClass->readClassFile(fopen($fullClassPath, 'rb'), $fullClassPath);
+				$this->addClass($javaClass);				
+			} else {
+				if ($throw) throw(new Exception("Cannot find class '{$className}'"));
+				return NULL;
+			}
+		}
+		return $class;
+	}
+	
 	public function callStatic($className, $methodName, $params = array()) {
-		/* @var $class JavaClass */
-		$class = $this->classes[$className];
+		$class = $this->getClass($className);
 		$method = $class->getMethod($methodName);
 		return $this->interpret($method->code, $params);
 	}
@@ -62,8 +128,14 @@ class JavaInterpreter {
 	
 	protected function newObject(JavaConstantClassReference $classRef) {
 		$className = $classRef->getClassName();
-		$phpClassName = $this->getPhpClassNameFromJavaClassName($className);
-		return new $phpClassName();
+		
+		$javaClass = $this->getClass($className, false);
+		if ($javaClass !== NULL) {
+			return new JavaClassInstance($this, $javaClass);
+		} else {
+			$phpClassName = $this->getPhpClassNameFromJavaClassName($className);
+			return new $phpClassName();
+		}
 	}
 	
 	protected function getStaticFieldRef(JavaConstantFieldReference $fieldRef) {
@@ -73,14 +145,14 @@ class JavaInterpreter {
 		return $phpClassName::$$fieldName;
 	}
 	
-	protected function _callMethod($invokeStatic, $func, $params) {
+	public function _callMethod($invokeStatic, $func, $params) {
 		// Static call.
 		if (is_string($func[0])) {
 			if (isset($this->classes[$func[0]])) {
 				return $this->callStatic($func[0], $func[1], $params);
 			}
 		}
-
+		
 		if (!$invokeStatic) {
 			if (is_int($func[0])) {
 				$func[0] = new \java\lang\Integer($func[0]);
@@ -93,6 +165,16 @@ class JavaInterpreter {
 			// print is a reserved keyword on PHP.
 			if ($func[1] == 'print') {
 				$func[1] = '_print';
+			}
+		}
+		
+		if ($invokeStatic) {
+			if (!is_callable($func)) {
+				/* @var $javaClass JavaClass */
+				$javaClass = $this->getClass($func[0], false);
+				if ($javaClass !== NULL) {
+					return $this->callStatic($javaClass->getName(), $func[1]);
+				}
 			}
 		}
 		
@@ -130,10 +212,15 @@ class JavaInterpreter {
 		
 		if (!$invokeStatic) {
 			$object = $this->stackPop();
+		} else {
+			$object = NULL;
 		}
 		
-		if ($methodName == '<init>') {
-			$methodName = '__java_constructor';
+		//if (!($object instanceof JavaClassInstance))
+		{
+			if ($methodName == '<init>') {
+				$methodName = '__java_constructor';
+			}
 		}
 		
 		if (!$invokeStatic) {
@@ -151,14 +238,11 @@ class JavaInterpreter {
 		//echo "paramsCount: $paramsCount\n";
 	}
 	
-	protected function interpret(JavaCode $code, $params = array()) {
+	public function interpret(JavaCode $code, $locals = array()) {
 		if ($this->autoDisasm) {
 			$code->disasm();
 			//$javaClass->getMethod($methodName)->disasm();
 		}
-		
-		$locals = array();
-		foreach ($params as $k => $param) $locals[$k] = $param;
 		
 		$trace = $this->autoTrace;
 		
@@ -200,7 +284,12 @@ class JavaInterpreter {
 				case JavaOpcodes::OP_ICONST_5:
 					$this->stackPush($op - JavaOpcodes::OP_ICONST_0);
 				break;
+				case JavaOpcodes::OP_LCONST_0:
+				case JavaOpcodes::OP_LCONST_1:
+					$this->stackPush(new PhpLong($op - JavaOpcodes::OP_LCONST_0));
+				break;
 				case JavaOpcodes::OP_LDC_W:
+				case JavaOpcodes::OP_LDC2_W: // long or double
 					$param0 = fread2_be($f);
 					/* @var $constant JavaConstant */
 					$constant = $code->constantPool->get($param0);
@@ -216,8 +305,15 @@ class JavaInterpreter {
 				break;
 				case JavaOpcodes::OP_ASTORE:
 				case JavaOpcodes::OP_ISTORE:
+				case JavaOpcodes::OP_LSTORE:
 					$index = fread1($f);
 					$locals[$index] = $this->stackPop();
+				break;
+				case JavaOpcodes::OP_LSTORE_0:
+				case JavaOpcodes::OP_LSTORE_1:
+				case JavaOpcodes::OP_LSTORE_2:
+				case JavaOpcodes::OP_LSTORE_3:
+					$locals[$op - JavaOpcodes::OP_LSTORE_0] = $this->stackPop();
 				break;
 				case JavaOpcodes::OP_ISTORE_0:
 				case JavaOpcodes::OP_ISTORE_1:
@@ -233,6 +329,7 @@ class JavaInterpreter {
 				break;
 				case JavaOpcodes::OP_ALOAD:
 				case JavaOpcodes::OP_ILOAD:
+				case JavaOpcodes::OP_LLOAD:
 					$index = fread1($f);
 					$this->stackPush($locals[$index]);
 				break;
@@ -248,6 +345,12 @@ class JavaInterpreter {
 				case JavaOpcodes::OP_ILOAD_2:
 				case JavaOpcodes::OP_ILOAD_3:
 					$this->stackPush($locals[$op - JavaOpcodes::OP_ILOAD_0]);
+				break;
+				case JavaOpcodes::OP_LLOAD_0:
+				case JavaOpcodes::OP_LLOAD_1:
+				case JavaOpcodes::OP_LLOAD_2:
+				case JavaOpcodes::OP_LLOAD_3:
+					$this->stackPush($locals[$op - JavaOpcodes::OP_LLOAD_0]);
 				break;
 				case JavaOpcodes::OP_INVOKESPECIAL:
 				case JavaOpcodes::OP_INVOKEVIRTUAL:
@@ -332,10 +435,19 @@ class JavaInterpreter {
 					$param1 = fread1_s($f);
 					$locals[$param0] += $param1;
 				break;
+				case JavaOpcodes::OP_LNEG:
+					$valueLeft = $this->stackPop();
+					$this->stackPush($valueLeft->neg());
+				break;
+				case JavaOpcodes::OP_INEG:
+					$valueLeft = $this->stackPop();
+					$this->stackPush(-$valueLeft);
+				break;
 				case JavaOpcodes::OP_IADD:
 				case JavaOpcodes::OP_ISUB:
 				case JavaOpcodes::OP_IMUL:
 				case JavaOpcodes::OP_IDIV:
+				case JavaOpcodes::OP_IREM:
 				case JavaOpcodes::OP_IXOR:
 				case JavaOpcodes::OP_IOR:
 				case JavaOpcodes::OP_IAND:
@@ -350,6 +462,7 @@ class JavaInterpreter {
 						case JavaOpcodes::OP_ISUB: $result = (int)($valueLeft - $valueRight); break;
 						case JavaOpcodes::OP_IMUL: $result = (int)($valueLeft * $valueRight); break;
 						case JavaOpcodes::OP_IDIV: $result = (int)($valueLeft / $valueRight); break;
+						case JavaOpcodes::OP_IREM: $result = (int)($valueLeft % $valueRight); break;
 						case JavaOpcodes::OP_IXOR: $result = (int)($valueLeft ^ $valueRight); break;
 						case JavaOpcodes::OP_IOR: $result = (int)($valueLeft | $valueRight); break;
 						case JavaOpcodes::OP_IAND: $result = (int)($valueLeft & $valueRight); break;
@@ -360,8 +473,58 @@ class JavaInterpreter {
 					$this->stackPush($result);
 				}
 				break;
+				case JavaOpcodes::OP_LADD:
+				case JavaOpcodes::OP_LSUB:
+				case JavaOpcodes::OP_LMUL:
+				case JavaOpcodes::OP_LDIV:
+				case JavaOpcodes::OP_LREM:
+				case JavaOpcodes::OP_LXOR:
+				case JavaOpcodes::OP_LOR:
+				case JavaOpcodes::OP_LAND:
+				case JavaOpcodes::OP_LUSHR:
+				case JavaOpcodes::OP_LSHR:
+					{
+						$valueRight = $this->stackPop();
+						$valueLeft  = $this->stackPop();
+						$result = NULL;
+						switch ($op) {
+							case JavaOpcodes::OP_LADD: $result = ($valueLeft->add($valueRight)); break;
+							case JavaOpcodes::OP_LSUB: $result = ($valueLeft->sub($valueRight)); break;
+							case JavaOpcodes::OP_LMUL: $result = ($valueLeft->mul($valueRight)); break;
+							case JavaOpcodes::OP_LDIV: $result = ($valueLeft->div($valueRight)); break;
+							case JavaOpcodes::OP_LREM: $result = ($valueLeft->rem($valueRight)); break;
+							case JavaOpcodes::OP_LXOR: $result = ($valueLeft->_xor($valueRight)); break;
+							case JavaOpcodes::OP_LOR: $result = ($valueLeft->_or($valueRight)); break;
+							case JavaOpcodes::OP_LAND: $result = ($valueLeft->_and($valueRight)); break;
+							case JavaOpcodes::OP_LUSHR: $result = (\IUSHR($valueLeft, $valueRight)); break;
+							case JavaOpcodes::OP_LSHR: $result = ($valueLeft >> $valueRight); break;
+						}
+						if ($result === NULL) throw(new Exception("Unexpected !!!"));
+						$this->stackPush($result);
+					}
+				break;
+				case JavaOpcodes::OP_LCMP:
+					$valueRight = $this->stackPop();
+					$valueLeft  = $this->stackPop();
+					if ($valueLeft < $valueRight) {
+						$this->stackPush(-1);
+					} else if ($valueLeft > $valueRight) {
+						$this->stackPush(+1);
+					} else {
+						$this->stackPush(0);
+					}
+				break;
 				case JavaOpcodes::OP_I2B:
 					$this->stackPush(value_get_byte($this->stackPop()));
+				break;
+				case JavaOpcodes::OP_I2C:
+					$this->stackPush(value_get_char($this->stackPop()));
+				break;
+				case JavaOpcodes::OP_I2L:
+					$this->stackPush(value_get_long($this->stackPop()));
+				break;
+				case JavaOpcodes::OP_L2I:
+					$this->stackPush(value_get_int($this->stackPop()));
 				break;
 				case JavaOpcodes::OP_NEW:
 					$param0 = fread2_be($f);
@@ -393,7 +556,9 @@ class JavaInterpreter {
 				break;
 				case JavaOpcodes::OP_AASTORE:
 				case JavaOpcodes::OP_BASTORE:
+				case JavaOpcodes::OP_CASTORE:
 				case JavaOpcodes::OP_IASTORE:
+				case JavaOpcodes::OP_LASTORE:
 					$value = $this->stackPop();
 					$index = $this->stackPop();
 					$array = $this->stackPop();
@@ -404,9 +569,29 @@ class JavaInterpreter {
 						echo "ARRAY:"; var_dump($array);
 					}
 				break;
-				case JavaOpcodes::OP_AALOAD:
-				case JavaOpcodes::OP_BALOAD:
-				case JavaOpcodes::OP_IALOAD:
+				case JavaOpcodes::OP_PUTFIELD: // http://java.sun.com/docs/books/jvms/second_edition/html/Instructions2.doc11.html
+					$fieldIndex = fread2_be($f);
+					/* @var $fieldRef JavaConstantFieldReference */
+					$fieldRef = $code->constantPool->get($fieldIndex);
+					$value = $this->stackPop();
+					$object = $this->stackPop();
+					$key = $fieldRef->getNameTypeDescriptor()->getIdentifierNameString();
+					$object->$key = $value;
+					//echo "$key <- $value"; exit;
+				break;
+				case JavaOpcodes::OP_GETFIELD:
+					$fieldIndex = fread2_be($f);
+					/* @var $fieldRef JavaConstantFieldReference */
+					$fieldRef = $code->constantPool->get($fieldIndex);
+					$object = $this->stackPop();
+					$key = $fieldRef->getNameTypeDescriptor()->getIdentifierNameString();
+					$this->stackPush($object->$key);
+				break;
+				case JavaOpcodes::OP_AALOAD: // Object Array
+				case JavaOpcodes::OP_BALOAD: // Byte/Bool Array
+				case JavaOpcodes::OP_CALOAD: // Char Array
+				case JavaOpcodes::OP_IALOAD: // Int Array
+				case JavaOpcodes::OP_LALOAD: // Long Array
 					$index = $this->stackPop();
 					$array = $this->stackPop();
 					if ($trace) {

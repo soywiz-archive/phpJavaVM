@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.security.*;
@@ -6,6 +7,14 @@ import java.util.HashMap;
 
 public class Test {
 	static public void main(String[] args) {
+		try {
+			main2(args);
+		} catch (Exception exception) {
+			exception.printStackTrace();
+		}
+		
+	}
+	static public void main2(String[] args) throws Exception {
 		test1();
 		test2();
 		test3();
@@ -17,11 +26,7 @@ public class Test {
 		test9();
 		test10();
 		test11();
-		try {
-			test12();
-		} catch (Exception exception) {
-			exception.printStackTrace();
-		}
+		test12();
 		test13_int_arithmetic();
 		test14_int_logic();
 		test14b_int_logic();
@@ -29,6 +34,10 @@ public class Test {
 		test16_branches_0();
 		test17_branches_n();
 		test18_crc32(new String[] { "Hello World!" });
+		test19_instantiate_non_native_class();
+		test20_long_arithmetic();
+		test20_long_arithmetic2();
+		test21_non_native_md5();
 	}
 	
 	static public void test1() {
@@ -128,7 +137,7 @@ public class Test {
 		int b = 17;
 		int c = 7777777;
 		int d = 3;
-		int e = (((a + b) * c) / 1000) - d;
+		int e = -(((((a + b) * c) / 1000) - d) % 7);
 		System.out.println(e);
 	}
 	
@@ -181,7 +190,6 @@ public class Test {
 	
 	// http://introcs.cs.princeton.edu/java/51data/CRC32.java.html
     public static void test18_crc32(String[] args) { 
-
         /**************************************************************************
          *  Using table lookup
          *  Reference: http://snippets.dzone.com/tag/crc32
@@ -267,6 +275,42 @@ public class Test {
          java.util.zip.CRC32 x = new java.util.zip.CRC32();
          x.update(bytes);
          System.out.println("CRC32 (via Java's library)     = " + Long.toHexString(x.getValue()));
-
      }
+    
+    
+    public static void test19_instantiate_non_native_class() {
+    	Test2 test2 = new Test2();
+    	test2.value = 333;
+    	System.out.println(test2.getValue());
+    }
+    
+    public static void test20_long_arithmetic() {
+    	/*
+    	long[] a = new long[] { 3, 8 };
+    	long[] b = new long[] { 4294967296L, 1L };
+    	long[] c = new long[] { 4294967296L, 4294967296L };
+    	long[] d = new long[] { 9999999999999999L, 9999999999999999L };
+    	long[] e = new long[] { -1, -4 };
+    	System.out.println(a[0] + a[1]);
+    	System.out.println(b[0] + b[1]);
+    	System.out.println(c[0] + c[1]);
+    	System.out.println(d[0] + d[1]);
+    	System.out.println(e[0] + e[1]);
+    	*/
+    	//System.out.println(-9999999999999999L);
+    }
+    
+    public static void test20_long_arithmetic2() {
+    	/*
+    	return;
+    	long a = 3L;
+    	long b = 8L;
+    	long c = 7;
+    	System.out.println((-(((a + b) * c) % 21) / 2) ^ 33);
+    	*/
+    }
+    
+    public static void test21_non_native_md5() throws IOException {
+    	//MD5.main(new String[] { });
+    }
 }

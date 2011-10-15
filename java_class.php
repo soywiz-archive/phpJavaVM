@@ -66,7 +66,9 @@ class JavaClass {
 	 * @return JavaMethod
 	 */
 	public function getMethod($name) {
-		return $this->methods[$name];
+		$method = &$this->methods[$name];
+		if (!isset($method)) throw(new Exception("Can't find method name '{$name}' for class '" . $this->getName() . "'"));
+		return $method;
 	}
 	
 	public function getMajorVersionString() {
@@ -87,14 +89,18 @@ class JavaClass {
 		return $this->constantPool->get($this->this_class)->getClassName();
 	}
 	
-	public function readClassFile($f) {
+	public function readClassFile($f, $className = '<unknown>') {
 		$this->magic              = fread4_be($f);
 		$this->minor_version      = fread2_be($f);
 		$this->major_version      = fread2_be($f);
 		$this->contant_pool_count = fread2_be($f);
 
-		for ($index = 1; $index < $this->contant_pool_count; $index++) {
-			$this->constantPool->add($index, $this->readConstantPoolInfo($f));
+		for ($index = 1; $index < $this->contant_pool_count;) {
+			//echo "{$index}/{$this->contant_pool_count}\n";
+			$increment = NULL;
+			$this->constantPool->add($index, $this->readConstantPoolInfo($f, $className, $increment));
+			
+			$index += $increment;
 		}
 		
 		$this->access_flags = fread2_be($f);
@@ -166,8 +172,11 @@ class JavaClass {
 	const CONSTANT_InterfaceMethodref = 11;
 	const CONSTANT_NameAndType        = 12;
 	
-	protected function readConstantPoolInfo($f) {
+	protected function readConstantPoolInfo($f, $className, &$increment) {
+		$offset = ftell($f);
 		$type = fread1($f);
+		
+		$increment = 1;
 
 		switch ($type) {
 			case self::CONSTANT_Utf8:
@@ -182,7 +191,10 @@ class JavaClass {
 			case self::CONSTANT_Float:
 				break;
 			case self::CONSTANT_Long:
-				break;
+				$value = fread8_be_s($f);
+				$increment = 2;
+				return new JavaConstantLong($this->constantPool, $value);
+
 			case self::CONSTANT_Double:
 				break;
 
@@ -215,7 +227,7 @@ class JavaClass {
 				return new JavaConstantNameTypeDescriptor($this->constantPool, $identifierNameStringIndex, $typeDescriptorStringIndex);
 				
 			default:
-				throw(new Exception("Unknown type of constant pool info {$type}"));
+				throw(new Exception(sprintf("Unknown type of constant pool info %d at %s:%08X:", $type, $className, $offset)));
 		}
 		
 		throw(new Exception("Unimplemented type of constant pool {$type}"));

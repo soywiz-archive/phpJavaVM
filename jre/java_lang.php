@@ -17,6 +17,10 @@ class String extends \java\lang\Object {
 	public $encoding;
 	
 	public function __construct($str = NULL, $encoding = 'UTF-8') {
+		$this->__java_constructor($str, $encoding);
+	}
+	
+	public function __java_constructor($str = NULL, $encoding = 'UTF-8') {
 		$this->str = $str;
 		$this->encoding = $encoding;
 	}
@@ -32,6 +36,10 @@ class String extends \java\lang\Object {
 	
 	public function length() {
 		return \mb_strlen($this->str, $this->encoding);
+	}
+	
+	public function toCharArray() {
+		return string_to_array($this->str);
 	}
 	
 	static public function format($format, $arguments) {
